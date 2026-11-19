@@ -145,6 +145,9 @@ Controls:
 - Add 3 example questions under the message box (for example "What are the moons of Mars?", "How do I make pancakes?", "Who won the 2022 World Cup?").
 - Launch with `demo.launch(debug=True, show_error=True)`. Add a markdown note: the printed `gradio.live` link is public and uses my OpenAI key, so it must not be shared, and the cell should be stopped when done.
 
+## Reflection
+The notebook ends with a Reflection markdown cell summarizing the observed persistence, topic-boundary behavior, and tradeoffs.
+
 ## Code style
 - Clear markdown headers between sections: setup, secrets, model, topics and system message, state, node, graph, checkpointer, drawing, graph test, conversations, interface.
 - Short docstrings on functions.
@@ -159,3 +162,4 @@ Controls:
 - v4: the deadlock fix worked (the conversation list loaded), but building the interface failed with `TypeError` on `gr.Chatbot(type="messages")`: the installed Gradio 6 no longer accepts `type`. Removed the argument; the chat still uses `{"role", "content"}` dicts.
 - v5: the interface opened, but every Send showed "Error" on the chat window, the message box and the saved list. Reproduced locally: with `gr.State()` the open `thread_id` can be `None`, the turn is saved under a different thread, and `get_state(config).values["messages"]` raises `KeyError`. Fixed with `gr.State(new_thread)`, a fallback that creates a `thread_id` if it is empty, building the chat from the `invoke` result, and `demo.launch(debug=True, show_error=True)` so errors are visible.
 - v6: trying to break the bot showed it was too strict, not too loose: in the Cooking club it refused "As a football coach, what should I eat before a game?" (a question about food) because it mentions football. Off-topic and old-topic questions, and essay requests disguised as Python or geography tasks, were all refused correctly. Added a rule to `SYSTEM_TEMPLATE`: judge a question by what it actually asks, not by the words it contains.
+- v7: added the final Reflection cell to the notebook, after running it in Colab and testing the interface.
