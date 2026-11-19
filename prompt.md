@@ -137,11 +137,11 @@ Controls:
 | Refresh list | `gr.Button` | Reloads the Saved conversations choices from the database. |
 | New conversation | `gr.Button` | Creates a new `thread_id`, clears the chat window and clears the Saved conversations selection. The Club dropdown keeps its value. |
 | Chat window | `gr.Chatbot()` | Shows the open conversation using Gradio 6's default messages format. |
-| Message box + Send | `gr.Textbox` and `gr.Button`; Enter also sends | Sends only the new message and the current topic: `graph.invoke({"messages": [HumanMessage(text)], "topic": topic}, config)` with the open `thread_id`. Ignore empty messages. After the reply, rebuild the chat window from `graph.get_state(config).values["messages"]`, clear the message box, and refresh the Saved conversations list. |
+| Message box + Send | `gr.Textbox` and `gr.Button`; Enter also sends | Sends only the new message and the current topic: `graph.invoke({"messages": [HumanMessage(text)], "topic": topic}, config)` with the open `thread_id`, creating one if it is empty. Ignore empty messages. Build the chat window from the invoke result's `result["messages"]`, clear the message box, and refresh the Saved conversations list. |
 
-- Keep the open `thread_id` in `gr.State`, so each browser tab has its own open conversation. On page load (`demo.load`), start a new `thread_id` and fill the Saved conversations list from the database.
+- Keep the open `thread_id` in `gr.State(new_thread)`, so each browser tab starts with its own fresh conversation. On page load (`demo.load`), fill only the Saved conversations list from the database; if `send_message` receives an empty `thread_id`, create one with `new_thread()` before calling the graph.
 - Add 3 example questions under the message box (for example "What are the moons of Mars?", "How do I make pancakes?", "Who won the 2022 World Cup?").
-- Launch with `demo.launch()`. Add a markdown note: the printed `gradio.live` link is public and uses my OpenAI key, so it must not be shared, and the cell should be stopped when done.
+- Launch with `demo.launch(debug=True, show_error=True)`. Add a markdown note: the printed `gradio.live` link is public and uses my OpenAI key, so it must not be shared, and the cell should be stopped when done.
 
 ## Code style
 - Clear markdown headers between sections: setup, secrets, model, topics and system message, state, node, graph, checkpointer, drawing, graph test, conversations, interface.
@@ -155,3 +155,4 @@ Controls:
 - v2: first run in Colab failed with `OpenAIError: Missing credentials` in the model cell, because `OPENAI_API_KEY` was only set later, in the checkpointer cell. Moved loading the key into its own Secrets cell right after the install cell, before `init_chat_model`.
 - v3: the Gradio cell never finished and printed nothing. `list_conversations()` called `graph.get_state` inside the `for checkpoint in checkpointer.list(None)` loop; `PostgresSaver.list` holds the connection lock while it yields, so the inner call waited forever. Split it into two steps: first collect all thread ids, then read each thread's state.
 - v4: the deadlock fix worked (the conversation list loaded), but building the interface failed with `TypeError` on `gr.Chatbot(type="messages")`: the installed Gradio 6 no longer accepts `type`. Removed the argument; the chat still uses `{"role", "content"}` dicts.
+- v5: the interface opened, but every Send showed "Error" on the chat window, the message box and the saved list. Reproduced locally: with `gr.State()` the open `thread_id` can be `None`, the turn is saved under a different thread, and `get_state(config).values["messages"]` raises `KeyError`. Fixed with `gr.State(new_thread)`, a fallback that creates a `thread_id` if it is empty, building the chat from the `invoke` result, and `demo.launch(debug=True, show_error=True)` so errors are visible.
