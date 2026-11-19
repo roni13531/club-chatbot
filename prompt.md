@@ -13,6 +13,13 @@ Keep it small: one node, no tools, no extra LLM calls, no loops inside the graph
   ```
   !pip -q install langgraph langchain langchain-openai langgraph-checkpoint-postgres "psycopg[binary]" gradio
   ```
+- **Cell order matters:** Add a Secrets code cell immediately after the install cell and before the model cell:
+  ```python
+  import os
+  from google.colab import userdata
+  os.environ["OPENAI_API_KEY"] = userdata.get("OPENAI_API_KEY")
+  ```
+  The key must be set before `init_chat_model(MODEL_NAME)` runs in the model cell, or model initialization fails with missing credentials.
 - Add a markdown cell explaining that two Colab Secrets are required, both with Notebook access turned on:
   - `OPENAI_API_KEY`
   - `SUPABASE_DB_URL`: the Supabase **Session pooler** URI (IPv4; Colab cannot reach the IPv6 direct connection).
@@ -78,7 +85,7 @@ from psycopg.rows import dict_row
 from google.colab import userdata
 from langgraph.checkpoint.postgres import PostgresSaver
 
-os.environ["OPENAI_API_KEY"] = userdata.get("OPENAI_API_KEY")
+# OPENAI_API_KEY is already set in the Secrets cell at the top of the notebook
 conn = psycopg.connect(userdata.get("SUPABASE_DB_URL"),
                        autocommit=True, row_factory=dict_row, prepare_threshold=0)
 checkpointer = PostgresSaver(conn)   # <-- the checkpointer is created here
@@ -145,3 +152,4 @@ Controls:
 
 ## Revision log
 - v1: initial spec, based on the class prompts (checkpointer + Gradio): Supabase `PostgresSaver`, `topic` in the state, system message built from the topic on every call, threads listed from the database, and a `gr.Blocks` interface.
+- v2: first run in Colab failed with `OpenAIError: Missing credentials` in the model cell, because `OPENAI_API_KEY` was only set later, in the checkpointer cell. Moved loading the key into its own Secrets cell right after the install cell, before `init_chat_model`.
