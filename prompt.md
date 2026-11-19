@@ -120,8 +120,8 @@ Then a separate cell that prints the number of messages and the topic from `grap
 ## Conversations (threads)
 - Each conversation has its own `thread_id = str(uuid.uuid4())`. Do not use `request.session_hash`.
 - `list_conversations()` reads the list **from the database**, never from a Python variable:
-  - Collect the unique `thread_id`s from `checkpointer.list(None)`, keeping the first time each one appears (newest first).
-  - For each thread, read `graph.get_state(config).values` and build a readable label: `"[{topic}] {first words of the first Human message}"` (about 40 characters, with `…` if cut).
+  - Step 1: loop over `checkpointer.list(None)` and collect only the unique `thread_id`s, keeping the first time each one appears (newest first). Never call the checkpointer or graph inside this loop: `PostgresSaver.list` holds the connection lock while it yields, so another call can wait forever.
+  - Step 2: after the list loop has finished, for each collected thread ID read `graph.get_state(config).values` and build a readable label: `"[{topic}] {first words of the first Human message}"` (about 40 characters, with `…` if cut).
   - Skip threads with no messages.
   - Return a list of `(label, thread_id)` pairs for a Gradio dropdown.
 - `load_conversation(thread_id)` reads `graph.get_state(config).values` and returns the chat messages (Human and AI only, as `{"role", "content"}` dicts) and the saved topic. Mark this function with a comment `# <-- loads an old conversation back into the interface`.
@@ -153,3 +153,4 @@ Controls:
 ## Revision log
 - v1: initial spec, based on the class prompts (checkpointer + Gradio): Supabase `PostgresSaver`, `topic` in the state, system message built from the topic on every call, threads listed from the database, and a `gr.Blocks` interface.
 - v2: first run in Colab failed with `OpenAIError: Missing credentials` in the model cell, because `OPENAI_API_KEY` was only set later, in the checkpointer cell. Moved loading the key into its own Secrets cell right after the install cell, before `init_chat_model`.
+- v3: the Gradio cell never finished and printed nothing. `list_conversations()` called `graph.get_state` inside the `for checkpoint in checkpointer.list(None)` loop; `PostgresSaver.list` holds the connection lock while it yields, so the inner call waited forever. Split it into two steps: first collect all thread ids, then read each thread's state.
