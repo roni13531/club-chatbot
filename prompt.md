@@ -136,7 +136,7 @@ Controls:
 | Saved conversations | `gr.Dropdown` of `(label, thread_id)` | Choosing one calls `load_conversation`, shows its messages in the chat window, sets the Club dropdown to its saved topic, and makes it the open thread, so new messages continue it. |
 | Refresh list | `gr.Button` | Reloads the Saved conversations choices from the database. |
 | New conversation | `gr.Button` | Creates a new `thread_id`, clears the chat window and clears the Saved conversations selection. The Club dropdown keeps its value. |
-| Chat window | `gr.Chatbot(type="messages")` | Shows the open conversation. |
+| Chat window | `gr.Chatbot()` | Shows the open conversation using Gradio 6's default messages format. |
 | Message box + Send | `gr.Textbox` and `gr.Button`; Enter also sends | Sends only the new message and the current topic: `graph.invoke({"messages": [HumanMessage(text)], "topic": topic}, config)` with the open `thread_id`. Ignore empty messages. After the reply, rebuild the chat window from `graph.get_state(config).values["messages"]`, clear the message box, and refresh the Saved conversations list. |
 
 - Keep the open `thread_id` in `gr.State`, so each browser tab has its own open conversation. On page load (`demo.load`), start a new `thread_id` and fill the Saved conversations list from the database.
@@ -154,3 +154,4 @@ Controls:
 - v1: initial spec, based on the class prompts (checkpointer + Gradio): Supabase `PostgresSaver`, `topic` in the state, system message built from the topic on every call, threads listed from the database, and a `gr.Blocks` interface.
 - v2: first run in Colab failed with `OpenAIError: Missing credentials` in the model cell, because `OPENAI_API_KEY` was only set later, in the checkpointer cell. Moved loading the key into its own Secrets cell right after the install cell, before `init_chat_model`.
 - v3: the Gradio cell never finished and printed nothing. `list_conversations()` called `graph.get_state` inside the `for checkpoint in checkpointer.list(None)` loop; `PostgresSaver.list` holds the connection lock while it yields, so the inner call waited forever. Split it into two steps: first collect all thread ids, then read each thread's state.
+- v4: the deadlock fix worked (the conversation list loaded), but building the interface failed with `TypeError` on `gr.Chatbot(type="messages")`: the installed Gradio 6 no longer accepts `type`. Removed the argument; the chat still uses `{"role", "content"}` dicts.
