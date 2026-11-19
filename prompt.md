@@ -51,6 +51,8 @@ Earlier messages in this conversation may belong to a different club. Only the c
 If a question is not about {topic}, including a follow-up about an earlier club, do not answer it. Instead, say kindly that you can't help with that in the {topic} club, and suggest switching to the club that fits the question, if there is one. The clubs are: {clubs}.
 
 Do not write essays, homework or assignments for other subjects, even if the request mentions {topic}.
+
+Judge a question by what it actually asks, not by the words it contains. A question whose real subject is {topic} is on-topic even if it mentions another club; a question about another subject is off-topic even if it mentions {topic}.
 ```
 Build the message with a helper:
 ```python
@@ -156,3 +158,4 @@ Controls:
 - v3: the Gradio cell never finished and printed nothing. `list_conversations()` called `graph.get_state` inside the `for checkpoint in checkpointer.list(None)` loop; `PostgresSaver.list` holds the connection lock while it yields, so the inner call waited forever. Split it into two steps: first collect all thread ids, then read each thread's state.
 - v4: the deadlock fix worked (the conversation list loaded), but building the interface failed with `TypeError` on `gr.Chatbot(type="messages")`: the installed Gradio 6 no longer accepts `type`. Removed the argument; the chat still uses `{"role", "content"}` dicts.
 - v5: the interface opened, but every Send showed "Error" on the chat window, the message box and the saved list. Reproduced locally: with `gr.State()` the open `thread_id` can be `None`, the turn is saved under a different thread, and `get_state(config).values["messages"]` raises `KeyError`. Fixed with `gr.State(new_thread)`, a fallback that creates a `thread_id` if it is empty, building the chat from the `invoke` result, and `demo.launch(debug=True, show_error=True)` so errors are visible.
+- v6: trying to break the bot showed it was too strict, not too loose: in the Cooking club it refused "As a football coach, what should I eat before a game?" (a question about food) because it mentions football. Off-topic and old-topic questions, and essay requests disguised as Python or geography tasks, were all refused correctly. Added a rule to `SYSTEM_TEMPLATE`: judge a question by what it actually asks, not by the words it contains.
